@@ -1,10 +1,13 @@
 package com.robot.humanrobot.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.robot.humanrobot.model.HumanRobot;
+import com.robot.humanrobot.producer.KafkaProducerLdt;
 import com.robot.humanrobot.repo.HumanRobotRepository;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -29,7 +32,11 @@ import java.util.concurrent.ThreadLocalRandom;
 @EnableAsync
 public class HumanRobotService {
     @Autowired
+    KafkaProducerLdt producer;
+    @Autowired
     HumanRobotRepository humanRobotRepository;
+    @Value("${kafka.topic}")
+    private String topic;
     Boolean generationEnded = false;
     Map<String,Boolean> stopGeneration = new HashMap();
     Map<String,Boolean> stopUpdate = new HashMap();
@@ -42,6 +49,7 @@ public class HumanRobotService {
     }
     @Async
     public void generateData(int numberOfData, String creator) {
+        ObjectMapper mapper = new ObjectMapper();
         if (numberOfData>10000)
             numberOfData=10000;
         for (int i = 0; i < numberOfData; i++) {
@@ -51,8 +59,10 @@ public class HumanRobotService {
                     .setName("IRobot-" + humanRobot.getName())
                     .setTechRawCreationDate(new Date())
                     .setCreator(creator);
-
-            humanRobotRepository.saveAndFlush(humanRobot);
+            try {
+                producer.send(topic, (mapper.writeValueAsString(humanRobot)));
+            } catch (Exception e){e.printStackTrace();}
+           // humanRobotRepository.saveAndFlush(humanRobot);
             System.out.println("generateData - Current thread "+ Thread.currentThread().getId()+" for - "+creator);
             try {
                 Thread.sleep((ThreadLocalRandom.current().nextInt(10)) * 200);

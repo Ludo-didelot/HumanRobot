@@ -1,8 +1,10 @@
 package com.robot.humanrobot.controller;
 
 import com.robot.humanrobot.model.HumanRobot;
+import com.robot.humanrobot.producer.KafkaProducerLdt;
 import com.robot.humanrobot.service.HumanRobotService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,17 @@ public class HumanRobotController {
 
     @Autowired
     HumanRobotService humanRobotService;
+    @Autowired
+    KafkaProducerLdt producer;
+    @Autowired
+    Environment env;
+
+    @RequestMapping(value="/producer", method= RequestMethod.GET)
+    public String getResult(@RequestParam("topic") String topic,@RequestParam("input") String value) {
+
+        producer.send(topic, value);
+        return env.getProperty("message.response");
+    }
 
     @RequestMapping(value="/humanrobots", method=RequestMethod.GET)
     public List<HumanRobot> getAllHumanRobots() {
@@ -36,7 +49,7 @@ public class HumanRobotController {
                                                 @RequestParam(value = "robotnum", required = true) int numberOfData ,
                                                 @RequestParam(value = "updateDataTime", required = true) int secondInTimeToUpdate ) {
         humanRobotService.generateData(numberOfData, creator);
-        humanRobotService.modifyGeneratedData(creator,secondInTimeToUpdate);
+        //humanRobotService.modifyGeneratedData(creator,secondInTimeToUpdate);
         return new ResponseEntity<Boolean>(Boolean.TRUE, HttpStatus.OK);
     }
     @RequestMapping(value="/startDataGeneration", method=RequestMethod.GET)
